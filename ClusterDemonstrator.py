@@ -10,13 +10,16 @@ class Centroid:
         return euclidean_distances(X = point, Y = [[self.x, self.y]])
 
 class ClusterDemonstrator: 
-    def __init__(self, centers, centroids, n_samples = 20, cluster_std = 0.6):
+    def __init__(self, centers, centroids, n_samples = 20, cluster_std = 0.6, df = None):
         from sklearn.datasets.samples_generator import make_blobs
         
-        self.df = pd.DataFrame(make_blobs(n_samples = n_samples, 
-                                          centers = centers,
-                                          cluster_std = cluster_std)[0], 
-                               columns = ['x', 'y'])
+        if df == None:
+            self.df = pd.DataFrame(make_blobs(n_samples = n_samples, 
+                                              centers = centers,
+                                              cluster_std = cluster_std)[0], 
+                                   columns = ['x', 'y'])
+        else:
+            self.df = df
         
         xmin, xmax = min(self.df['x']), max(self.df['x'])
         ymin, ymax = min(self.df['y']), max(self.df['y'])
@@ -37,11 +40,7 @@ class ClusterDemonstrator:
         
         
     def iterate(self, n):
-        for c in self.centroids:
-            print(c.name, c.x, c.y)
-            
         points =[[x,y] for x,y in zip(self.df['x'], self.df['y'])]
-        print(points[:3])
         
         for centroid in self.centroids:
             self.df[centroid.name] = centroid.calculate_distance(points)
@@ -58,6 +57,7 @@ class ClusterDemonstrator:
                 centroid.y = my     
             else:
                 print('cluster {} has no points!'.format(centroid.name))
+                self.centroids.remove(centroid)
                                   
         self.df['iteration'] = n
         
@@ -85,11 +85,12 @@ class ClusterDemonstrator:
                 plt.title(str(n))
                 plt.show()
                 
-            prev = set([(c.x, c.y) for c in self.centroids])
-            print('...{}'.format(n))
+            prev = set([(round(c.x), round(c.y)) for c in self.centroids])
+            if vis == False:
+                print('...{}'.format(n))
             
             self.iterate(n)
-            current = set([(c.x, c.y) for c in self.centroids])
+            current = set([(round(c.x), round(c.y)) for c in self.centroids])
             
             
             if current == prev:
@@ -98,3 +99,4 @@ class ClusterDemonstrator:
             n += 1
             
         print('done')
+        
