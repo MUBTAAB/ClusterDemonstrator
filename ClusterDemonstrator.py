@@ -12,8 +12,10 @@ class Centroid:
         return euclidean_distances(X = point, Y = [[self.x, self.y]])
 
 class ClusterDemonstrator: 
-    def __init__(self, centers, centroids, n_samples = 20, cluster_std = 0.6, df = None):
+    def __init__(self, centers = 5, centroids = 3, n_samples = 1000, cluster_std = 2, df = None):
         from sklearn.datasets.samples_generator import make_blobs
+        import pandas as pd
+        import numpy as np
         
         if df == None:
             self.df = pd.DataFrame(make_blobs(n_samples = n_samples, 
@@ -90,6 +92,7 @@ class ClusterDemonstrator:
         print('iterating...')
         while n < max_iterations:
             if vis == True:
+                import matplotlib.pyplot as plt
                 plt.scatter(gen1.df['x'], gen1.df['y'], alpha = 0.8)
                 plt.scatter([c.x for c in self.centroids], 
                             [c.y for c in self.centroids])
@@ -110,3 +113,79 @@ class ClusterDemonstrator:
             n += 1
             
         print('done')
+        
+    def show_process(self):
+        import dash
+        import dash_core_components as dcc
+        import dash_html_components as html
+        import pandas as pd
+        import plotly.graph_objs as go
+        
+        df = self.history
+        
+        app = dash.Dash()
+        
+        app.layout = html.Div([
+            dcc.Graph(id='graph-with-slider'),
+            dcc.Slider(
+                id='year-slider',
+                min=df['iteration'].min(),
+                max=df['iteration'].max(),
+                value=df['iteration'].min(),
+                step=None,
+                marks={str(iteration): str(iteration) for iteration in df['iteration'].unique()}
+            )
+        ])
+        
+        
+        @app.callback(
+            dash.dependencies.Output('graph-with-slider', 'figure'),
+            [dash.dependencies.Input('year-slider', 'value')])
+        def update_figure(selected_iteration):
+            filtered_df = df[(df['iteration'] == selected_iteration)&(df['class'] == 'point')]
+            traces = []
+            for i in filtered_df['cluster'].unique():
+                df_by_cluster = filtered_df[filtered_df['cluster'] == i]
+                traces.append(go.Scatter(
+                    x=df_by_cluster['x'],
+                    y=df_by_cluster['y'],
+                    #text=df_by_cluster['cluster'],
+                    mode='markers',
+                    opacity=0.7,
+                    marker={
+                        'size': 15,
+                        'line': {'width': 0.5, 'color': 'white'}
+                    },
+                    name = '{} points'.format(i),
+                ))
+                
+            filtered_df = df[(df['iteration'] == selected_iteration)&(df['class'] == 'centroid')]
+            for i in filtered_df['cluster'].unique():
+                    df_by_cluster = filtered_df[filtered_df['cluster'] == i]
+                    traces.append(go.Scatter(
+                        x=df_by_cluster['x'],
+                        y=df_by_cluster['y'],
+                        mode='markers',
+                        marker={
+                            'size': 15,
+                            'color': 'black'
+                        },
+                        name = '{} centroid'.format(i)
+                    ))
+        
+            return {
+                'data': traces,
+                'layout': go.Layout(
+                    xaxis={'range':[min(self.xmin, self.ymin)-3, max(self.xmax, self.xmax)+3], 'autorange':False},
+                    yaxis={'range' : [min(self.xmin, self.ymin)-3, max(self.xmax, self.xmax)+3], 'autorange':False},
+                    margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
+                    showlegend=False,
+                    hovermode='closest',
+                    width = 500,
+                    height = 500,
+                )
+            }
+        
+        
+        if __name__ == '__main__':
+            app.run_server()
